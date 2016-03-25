@@ -1,0 +1,130 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.IO;
+
+namespace Assignment2
+{
+    /// <summary>
+    /// This class creates a dictionary of type String, list<String>
+    /// It reads the provided text file and converts every word to its 
+    /// numerical equivalent on a mobile keypad.
+    /// It acts as the Controller for this application (predictive mode)
+    /// </summary>
+    class T9Dictionary
+    {
+        public Dictionary<String, List<String>> myDictionary;
+
+        /// <summary>
+        /// This method creates the dictionary by parsing through the text file
+        /// and places every entry into an array of strings. It replaces every word 
+        /// with its numerical equivalent, and places this into a dictionary where the 
+        /// keys are the numerical equivalents, and values are a list of valid words that 
+        /// can be formed with the corresponding key.
+        /// </summary>
+        public void CreateDictionary()
+        {
+            myDictionary = new Dictionary<String, List<String>>();
+            List<String> WordList;
+            StringBuilder sb = null;
+            String line = "";
+
+            try
+            {
+                StreamReader sr = new StreamReader("english-words.txt");
+                while (true)
+                {
+                    line = sr.ReadLine();
+                    if (line == null)
+                        break;
+
+                    sb = new StringBuilder();
+                    for (int i = 0; i < line.Length; i++)
+                    {
+                        //Getting every character from every line read
+                        char digit = (char)line.ToCharArray().GetValue(i);
+
+                        // The 'if' statements below add entries into a StringBuilder
+                        // corresponding to their numerical equivalents on a keypad
+                        if (digit == 'a' || digit == 'b' || digit == 'c')
+                        {
+                            sb.Append('2');
+                        }
+                        if (digit == 'd' || digit == 'e' || digit == 'f')
+                        {
+                            sb.Append('3');
+                        }
+
+                        if (digit == 'g' || digit == 'h' || digit == 'i')
+                        {
+                            sb.Append('4');
+                        }
+
+                        if (digit == 'j' || digit == 'k' || digit == 'l')
+                        {
+                            sb.Append('5');
+                        }
+
+                        if (digit == 'm' || digit == 'n' || digit == 'o')
+                        {
+                            sb.Append('6');
+                        }
+
+                        if (digit == 'p' || digit == 'q' || digit == 'r' || digit == 's')
+                        {
+                            sb.Append('7');
+                        }
+
+                        if (digit == 't' || digit == 'u' || digit == 'v')
+                        {
+                            sb.Append('8');
+                        }
+
+                        if (digit == 'w' || digit == 'x' || digit == 'y' || digit == 'z')
+                        {
+                            sb.Append('9');
+                        }
+                    }
+
+                    // Adding a new key-value pair into the dictionary
+                    if (!myDictionary.ContainsKey(sb.ToString()))
+                    {
+                        WordList = new List<String>();
+                        WordList.Add(line);
+                        myDictionary.Add(sb.ToString(), WordList);
+                    }
+                    else
+                    {
+                        // If the dictionary contains a specific key, the new value 
+                        // gets chained to the list at that position, instead of replacing 
+                        // the entire entry in the dictionary.
+                        myDictionary.TryGetValue(sb.ToString(), out WordList);
+                        WordList.Add(line);
+                    }
+                }
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Invalid File " + e.StackTrace);
+            }
+        }
+
+        /// <summary>
+        /// This function retrieves the list of valid words corresponding to 
+        /// a keypad input
+        /// </summary>
+        /// <param name="Key">The sequence of digits clicked on the keypad</param>
+        /// <returns>a List containing corresponding values as strings</returns>
+        public List<String> GetWordList(String Key)
+        {
+            List<String> temp = new List<String>();
+            if (myDictionary.ContainsKey(Key))
+            {
+                temp = myDictionary[Key];
+            }
+            return temp;
+        }
+    }
+}

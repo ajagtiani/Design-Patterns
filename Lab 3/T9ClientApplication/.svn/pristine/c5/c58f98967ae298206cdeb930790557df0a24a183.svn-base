@@ -1,0 +1,972 @@
+﻿// Assignment 3, Part B: Silverlight T9 Client
+// Author: Aditya Jagtiani
+// Email: axj4479@rit.edu
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Shapes;
+using System.Text;
+using System.Windows.Threading;
+
+namespace T9ClientApplication
+{
+    /// <summary>
+    /// This class acts as a controller and performs the non-predictive texting 
+    /// functionality of the T9 keyboard. It also talks to the Model class and passes 
+    /// on the key sequence to it. 
+    /// </summary>
+    public partial class MainPage : UserControl
+    {
+        Model model = new Model(); //The object for the model
+
+        // A stringbuilder to pass the key press sequence to the model
+        StringBuilder KeyPressSequence = new StringBuilder("");
+
+        // Fields to handle click-timing intervals for non-predictive mode
+        DispatcherTimer ClickTimer = new DispatcherTimer();
+        private int MouseClickCount;
+        static int ToggleCounter;
+        String KeyInput;
+
+        // A static string to retrieve the first word in predictive mode
+        static String temp = "";
+
+        // A timer to render display in predictive mode
+        DispatcherTimer DisplayTimer = new DispatcherTimer();
+
+        public MainPage()
+        {
+            InitializeComponent();
+            // Initializing various entites
+            ClickTimer.Interval = new TimeSpan(0, 0, 0, 0, 800);
+            ClickTimer.Tick += new EventHandler(ClickHandlerNonPredictive);
+            DisplayTimer.Interval = new TimeSpan(0, 0, 0, 0, 200);
+            DisplayTimer.Tick += new EventHandler(DisplayHandler);
+        }
+        
+        /// <summary>
+        /// This function acts as a event handler for the display of words 
+        /// in predictive mode
+        /// </summary>
+        /// <param name="o">The object invoking the event for the event 
+        /// handler</param>
+        /// <param name="sender">Information about the event</param>
+        public void DisplayHandler(object o, EventArgs sender)
+        {
+            DisplayWords(temp);
+            DisplayTimer.Stop();
+        }
+
+        /// <summary>
+        /// This method stops the timer and displays the characters pressed in the time
+        ///	interval. It is invoked when the initial time interval expires
+        /// </summary>
+        /// <param name="o">The object invoking the event for the event 
+        /// handler</param>
+        /// <param name="sender">Information about the event</param>
+        public void ClickHandlerNonPredictive(object o, EventArgs sender)
+        {
+            ClickTimer.Stop();
+            MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+            MyTextBox.SelectionLength = 0;
+            MyTextBox.Focus();
+            MouseClickCount = 0;
+        }
+
+        /// <summary>
+        /// A basic assignment method assigns the valid word retrieved from 
+        /// the model to temp
+        /// </summary>
+        /// <param name="first">A valid word retrieved from the 
+        /// 'ResultList' structure in the model</param>
+        public static void CheckDisplay(String first)
+        {
+            temp = first;
+        }
+        /// <summary>
+        /// The method checks whether the keyboard is in 
+        /// predictive/non-predicive mode
+        /// </summary>
+        /// <returns>True if predictive check box checked
+        /// False if predictive check box not checked</returns>
+        private bool isPredictiveMode()
+        {
+            if (predictiveCheckbox.IsChecked == true)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '1' is pressed
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button1_Click(object sender, RoutedEventArgs e)
+        {
+            KeyPressSequence.Append("1");
+            model.LoadValidWords(KeyPressSequence.ToString());
+            DisplayTimer.Start();
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '2' is pressed.
+        /// For non predictive mode, it coordinates with the timer to check the 
+        /// number of key presses and displays the equivalent character. It handles 
+        /// single click functionalities and displays the alphabets associated 
+        /// with the button for single, double, triple etc clicks.
+        /// 
+        /// For predictive mode, it appends '2' to a StringBuilder and passes it 
+        /// on to the model, which communicates with the server and retrieves
+        /// a list of valid words associated with this keystroke.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button2_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                KeyPressSequence.Append("2");
+                model.LoadValidWords(KeyPressSequence.ToString());
+                DisplayTimer.Start();
+            }
+            else
+            {
+                String currentText = MyTextBox.Text;
+                char[] c = currentText.ToCharArray();
+                if (c.Length > 0)
+                {
+                    if (c[c.Length - 1] != 'a' && c[c.Length - 1] != 'b' 
+                                                && c[c.Length - 1] != 'c')
+                    {
+                        MouseClickCount = 0;
+                        ClickTimer.Stop();
+                    }
+                }
+                MouseClickCount = MouseClickCount + 1;
+                if (MouseClickCount == 1)
+                {
+                    KeyInput = "a";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 2)
+                {
+                    if (c[c.Length - 1] == 'a')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+
+                    KeyInput = "b";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 3)
+                {
+                    if (c[c.Length - 1] == 'b')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "c";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '3' is pressed.
+        /// For non predictive mode, it coordinates with the timer to check the 
+        /// number of key presses and displays the equivalent character. It handles 
+        /// single click functionalities and displays the alphabets associated 
+        /// with the button for single, double, triple etc clicks.
+        /// 
+        /// For predictive mode, it appends '2' to a StringBuilder and passes it 
+        /// on to the model, which communicates with the server and retrieves
+        /// a list of valid words associated with this keystroke.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button3_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                KeyPressSequence.Append("3");
+                model.LoadValidWords(KeyPressSequence.ToString());
+                DisplayTimer.Start();
+            }
+            else
+            {
+                String currentText = MyTextBox.Text;
+                char[] c = currentText.ToCharArray();
+                if (c.Length > 0)
+                {
+                    if (c[c.Length - 1] != 'd' && c[c.Length - 1] != 'e' 
+                                                && c[c.Length - 1] != 'f')
+                    {
+                        MouseClickCount = 0;
+                        ClickTimer.Stop();
+                    }
+                }
+                MouseClickCount = MouseClickCount + 1;
+                if (MouseClickCount == 1)
+                {
+                    KeyInput = "d";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    ClickTimer.Start();
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 2)
+                {
+                    if (c[c.Length - 1] == 'd')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+
+                    KeyInput = "e";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 3)
+                {
+                    if (c[c.Length - 1] == 'e')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "f";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '4' is pressed.
+        /// For non predictive mode, it coordinates with the timer to check the 
+        /// number of key presses and displays the equivalent character. It handles 
+        /// single click functionalities and displays the alphabets associated 
+        /// with the button for single, double, triple etc clicks.
+        /// 
+        /// For predictive mode, it appends '2' to a StringBuilder and passes it 
+        /// on to the model, which communicates with the server and retrieves
+        /// a list of valid words associated with this keystroke.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button4_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                // ToggleCounter = 0;
+                KeyPressSequence.Append("4");
+                model.LoadValidWords(KeyPressSequence.ToString());
+                DisplayTimer.Start();
+            }
+            else
+            {
+                String currentText = MyTextBox.Text;
+                char[] c = currentText.ToCharArray();
+                if (c.Length > 0)
+                {
+                    if (c[c.Length - 1] != 'g' && c[c.Length - 1] != 'h' 
+                                                && c[c.Length - 1] != 'i')
+                    {
+                        MouseClickCount = 0;
+                        ClickTimer.Stop();
+                    }
+                }
+                MouseClickCount = MouseClickCount + 1;
+                if (MouseClickCount == 1)
+                {
+                    KeyInput = "g";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 2)
+                {
+                    if (c[c.Length - 1] == 'g')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "h";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 3)
+                {
+                    if (c[c.Length - 1] == 'h')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "i";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '5' is pressed.
+        /// For non predictive mode, it coordinates with the timer to check the 
+        /// number of key presses and displays the equivalent character. It handles 
+        /// single click functionalities and displays the alphabets associated 
+        /// with the button for single, double, triple etc clicks.
+        /// 
+        /// For predictive mode, it appends '2' to a StringBuilder and passes it 
+        /// on to the model, which communicates with the server and retrieves
+        /// a list of valid words associated with this keystroke.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button5_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                KeyPressSequence.Append("5");
+                model.LoadValidWords(KeyPressSequence.ToString());
+                DisplayTimer.Start();
+            }
+            else
+            {
+                String currentText = MyTextBox.Text;
+                char[] c = currentText.ToCharArray();
+                if (c.Length > 0)
+                {
+                    if (c[c.Length - 1] != 'j' && c[c.Length - 1] != 'k' 
+                                                && c[c.Length - 1] != 'l')
+                    {
+                        MouseClickCount = 0;
+                        ClickTimer.Stop();
+                    }
+                }
+                MouseClickCount = MouseClickCount + 1;
+                if (MouseClickCount == 1)
+                {
+                    KeyInput = "j";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 2)
+                {
+                    if (c[c.Length - 1] == 'j')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "k";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 3)
+                {
+                    if (c[c.Length - 1] == 'h')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "l";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '6' is pressed.
+        /// For non predictive mode, it coordinates with the timer to check the 
+        /// number of key presses and displays the equivalent character. It handles 
+        /// single click functionalities and displays the alphabets associated 
+        /// with the button for single, double, triple etc clicks.
+        /// 
+        /// For predictive mode, it appends '2' to a StringBuilder and passes it 
+        /// on to the model, which communicates with the server and retrieves
+        /// a list of valid words associated with this keystroke.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button6_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                KeyPressSequence.Append("6");
+                model.LoadValidWords(KeyPressSequence.ToString());
+                DisplayTimer.Start();
+            }
+            else
+            {
+                String currentText = MyTextBox.Text;
+                char[] c = currentText.ToCharArray();
+                if (c.Length > 0)
+                {
+                    if (c[c.Length - 1] != 'm' && c[c.Length - 1] != 'n' 
+                                                && c[c.Length - 1] != 'o')
+                    {
+                        MouseClickCount = 0;
+                        ClickTimer.Stop();
+                    }
+                }
+                MouseClickCount = MouseClickCount + 1;
+                if (MouseClickCount == 1)
+                {
+                    KeyInput = "m";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 2)
+                {
+                    if (c[c.Length - 1] == 'm')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "n";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 3)
+                {
+                    if (c[c.Length - 1] == 'n')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "o";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '7' is pressed.
+        /// For non predictive mode, it coordinates with the timer to check the 
+        /// number of key presses and displays the equivalent character. It handles 
+        /// single click functionalities and displays the alphabets associated 
+        /// with the button for single, double, triple etc clicks.
+        /// 
+        /// For predictive mode, it appends '2' to a StringBuilder and passes it 
+        /// on to the model, which communicates with the server and retrieves
+        /// a list of valid words associated with this keystroke.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button7_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                KeyPressSequence.Append("7");
+                model.LoadValidWords(KeyPressSequence.ToString());
+                DisplayTimer.Start();
+            }
+            else
+            {
+                String currentText = MyTextBox.Text;
+                char[] c = currentText.ToCharArray();
+                if (c.Length > 0)
+                {
+                    if (c[c.Length - 1] != 'p' && c[c.Length - 1] != 'q' 
+                        && c[c.Length - 1] != 'r' && c[c.Length - 1] != 's')
+                    {
+                        MouseClickCount = 0;
+                        ClickTimer.Stop();
+                    }
+                }
+                MouseClickCount = MouseClickCount + 1;
+                if (MouseClickCount == 1)
+                {
+                    KeyInput = "p";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 2)
+                {
+                    if (c[c.Length - 1] == 'p')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "q";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 3)
+                {
+                    if (c[c.Length - 1] == 'q')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "r";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 4)
+                {
+                    if (c[c.Length - 1] == 'r')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "s";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '8' is pressed.
+        /// For non predictive mode, it coordinates with the timer to check the 
+        /// number of key presses and displays the equivalent character. It handles 
+        /// single click functionalities and displays the alphabets associated 
+        /// with the button for single, double, triple etc clicks.
+        /// 
+        /// For predictive mode, it appends '2' to a StringBuilder and passes it 
+        /// on to the model, which communicates with the server and retrieves
+        /// a list of valid words associated with this keystroke.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button8_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                KeyPressSequence.Append("8");
+                model.LoadValidWords(KeyPressSequence.ToString());
+                DisplayTimer.Start();
+            }
+            else
+            {
+                String currentText = MyTextBox.Text;
+                char[] c = currentText.ToCharArray();
+                if (c.Length > 0)
+                {
+                    if (c[c.Length - 1] != 't' && c[c.Length - 1] != 'u' 
+                        && c[c.Length - 1] != 'v')
+                    {
+                        MouseClickCount = 0;
+                        ClickTimer.Stop();
+                    }
+                }
+                MouseClickCount = MouseClickCount + 1;
+                if (MouseClickCount == 1)
+                {
+                    KeyInput = "t";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 2)
+                {
+                    if (c[c.Length - 1] == 't')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "u";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 3)
+                {
+                    if (c[c.Length - 1] == 'u')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "v";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// This functions handles keyboard responses when '9' is pressed.
+        /// For non predictive mode, it coordinates with the timer to check the 
+        /// number of key presses and displays the equivalent character. It handles 
+        /// single click functionalities and displays the alphabets associated 
+        /// with the button for single, double, triple etc clicks.
+        /// 
+        /// For predictive mode, it appends '2' to a StringBuilder and passes it 
+        /// on to the model, which communicates with the server and retrieves
+        /// a list of valid words associated with this keystroke.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// <param name="e">Information about the event</param>
+        private void Button9_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                KeyPressSequence.Append("9");
+                model.LoadValidWords(KeyPressSequence.ToString());
+                DisplayTimer.Start();
+            }
+            else
+            {
+                String currentText = MyTextBox.Text;
+                char[] c = currentText.ToCharArray();
+                if (c.Length > 0)
+                {
+                    if (c[c.Length - 1] != 'w' && c[c.Length - 1] != 'x' 
+                        && c[c.Length - 1] != 'y' && c[c.Length - 1] != 'z')
+                    {
+                        MouseClickCount = 0;
+                        ClickTimer.Stop();
+                    }
+                }
+                MouseClickCount = MouseClickCount + 1;
+                if (MouseClickCount == 1)
+                {
+                    KeyInput = "w";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 2)
+                {
+                    if (c[c.Length - 1] == 'w')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "x";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 3)
+                {
+                    if (c[c.Length - 1] == 'x')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "y";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+                else if (MouseClickCount == 4)
+                {
+                    if (c[c.Length - 1] == 'y')
+                    {
+                        MyTextBox.Text = MyTextBox.Text.Remove(MyTextBox.Text.Length - 1);
+                    }
+                    KeyInput = "z";
+                    MyTextBox.Text = MyTextBox.Text + KeyInput;
+
+                    // This is to add 'focus' or a cursor to the last character
+                    // at any time in non-predictive mode
+                    MyTextBox.SelectionStart = MyTextBox.Text.Length - 1;
+                    MyTextBox.SelectionLength = 1;
+                    MyTextBox.Focus();
+                    ClickTimer.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// This button handles the 'backspace' button on the keypad
+        /// In the non-predictive mode, it simply takes off the last character typed
+        /// 
+        /// In predictive mode, there are 3 cases handled:
+        /// If the last character is a space, it takes off the space
+        /// If the last character is a the end of a word, it takes off 
+        /// the the last character only
+        /// If the last character is a space, preceeded by a word, it takes 
+        /// off the space and the word
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the
+        /// event handler</param>
+        /// <param name="e">Information about the event</param>
+        private void DeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                String CurrentText = MyTextBox.Text;
+                StringBuilder DeleteBuilder;
+                String[] Word;
+                String Sequence = KeyPressSequence.ToString();
+                int SequenceLength = Sequence.Length;
+
+
+                // if there is a space present
+                if (CurrentText.Contains(" "))
+                {
+                    char[] BitChecker = CurrentText.ToCharArray();
+
+                    // Deletion if there is a space at the last position
+                    if (BitChecker[CurrentText.Length - 1] == ' ')
+                    {
+                        Word = CurrentText.Split(' ');
+                        for (int i = 0; i < Word.Length - 1; i++)
+                        {//Delete the word preceding the space also
+                            MyTextBox.Text = CurrentText.Substring(0, CurrentText.Length
+                                                        - 1 - Word[i].Length);
+                        }
+                    }
+
+                    // Deletion if the there is a char at the last position
+                    if (BitChecker[CurrentText.Length - 1] != ' ')
+                    {
+                        DeleteBuilder = new StringBuilder();
+                        CurrentText = MyTextBox.Text;
+                        Word = CurrentText.Split(' ');
+
+                        for (int i = 0; i < Word.Length - 1; i++)
+                        {
+                            DeleteBuilder.Append(Word[i] + " ");
+                        }
+                        Sequence = Sequence.Substring(0, Sequence.Length - 1);
+                        MyTextBox.Text = DeleteBuilder.ToString();
+                        // Re-initialize the Key Sequence to be passed
+                        KeyPressSequence = new StringBuilder(Sequence);
+                        model.LoadValidWords(KeyPressSequence.ToString());
+                        DisplayTimer.Start();
+                    }
+                }
+                else
+                {   // When the string contains no spaces at all
+                    SequenceLength -= 1;
+                    Sequence = Sequence.Substring(0, SequenceLength);
+                    KeyPressSequence = new StringBuilder(Sequence);
+                    model.LoadValidWords(KeyPressSequence.ToString());
+                    MyTextBox.Text = CurrentText.Substring(0, SequenceLength);
+                }
+            }
+
+            else if (!isPredictiveMode() && MyTextBox.Text.Length != 0)
+            {
+                // Taking off the last character in non-predictive mode
+                MyTextBox.Text = MyTextBox.Text.Substring(0, MyTextBox.Text.Length - 1);
+            }
+        }
+
+        /// <summary>
+        /// This function handles toggling of a word in predictive mode. 
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the
+        /// event handler</param>
+        /// <param name="e">Information about the event</param>
+        private void ToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                // Maintain a counter for the number of toggles. 
+                // This counter is 1 when the first words appears in the 
+                //textbox
+                ToggleCounter++;
+
+                String getDisplayText = MyTextBox.Text;
+
+                // if the string in the textbox doesn't contain a space
+                if (!getDisplayText.Contains(" "))
+                {
+                    int ToggleChecker = 1;
+                    String retrievedWords = model.Toggle(ToggleCounter, ToggleChecker);
+                    MyTextBox.Text = retrievedWords;
+                }
+
+                //Toggling if the string contains spaces
+                if (getDisplayText.Contains(" "))
+                {
+                    String[] splitWords = getDisplayText.Split(' ');
+                    StringBuilder sb = new StringBuilder("");
+
+                    //Similar approach as the one without spaces, with 
+                    //the exception that you split the string here and perform 
+                    //toggling on the latest word in the string
+                    for (int i = 0; i < splitWords.Length - 1; i++)
+                    {
+                        sb.Append(splitWords[i] + " ");
+                    }
+
+                    int ToggleChecker = 1;
+
+                    // Pass this information to the model
+                    String retrievedWordsWithSpaces = model.ToggleWithSpaces(ToggleCounter,
+                                                                    ToggleChecker, sb);
+                    MyTextBox.Text = retrievedWordsWithSpaces;
+                }
+            }
+        }
+
+        /// <summary>
+        /// This function handles keyboard responses when '#' is pressed.
+        /// For non-predictive mode, it simply appends a space to the existing 
+        /// string in the textbox
+        ///
+        /// For predictive mode, it stores the existing string in the textbox 
+        /// in a new String and appends space to it, to prevent deletion of 
+        /// the original string.
+        /// </summary>
+        /// <param name="sender">The object invoking the event for the event
+        /// handler</param>
+        /// 
+        /// <param name="e">Information about the event</param>
+        private void SpaceButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (isPredictiveMode())
+            {
+                String OldText = MyTextBox.Text;
+                String UpdatedText = OldText + " ";
+                MyTextBox.Text = UpdatedText;
+
+                ToggleCounter = 0;
+
+                // Refreshing the data in the StringBuilder
+                KeyPressSequence = new StringBuilder("");
+                model.ResultList = null;
+            }
+            else
+            {
+                MyTextBox.Text = MyTextBox.Text + " ";
+            }
+        }
+
+        /// <summary>
+        /// This function displays the predictive words on the screen. 
+        /// Performs predictive searching of dictionary and toggling of values
+        /// </summary>
+        /// <param name="temp">The words retrieved from ResultList in 
+        /// the model</param>
+        public void DisplayWords(String temp)
+        {
+            String MyText = MyTextBox.Text;
+            StringBuilder DisplayBuilder;
+            if (!MyText.Contains(" "))
+            {
+                MyTextBox.Text = temp;
+            }
+
+            else if (MyText.Contains(" "))
+            {
+                DisplayBuilder = new StringBuilder("");
+                String[] WordHolder = MyText.Split(' ');
+                for (int i = 0; i < WordHolder.Length - 1; i++)
+                {
+                    DisplayBuilder.Append(WordHolder[i] + " ");
+                }
+                MyTextBox.Text = DisplayBuilder.ToString() + temp;
+            }
+        }
+    }
+}

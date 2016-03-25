@@ -1,0 +1,131 @@
+﻿// Author: Aditya Jagtiani
+// Email: axj4479@rit.edu
+
+using System;
+using System.Net;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Ink;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Shapes;
+using System.Collections.Generic;
+using System.Text;
+
+namespace T9ClientApplication
+{
+    /// <summary>
+    /// This class acts as a model and communicates with the server. 
+    /// </summary>
+    public class Model
+    {
+        // Adding a proxy object to the client
+        public ServiceReference.Service1Client client;
+        // A list to hold the valid words returned by the server
+        public List<String> ResultList;
+
+        public Model()
+        {
+            client = new ServiceReference.Service1Client();
+            //Creating a listener for the server events
+            client.getPredictiveTextCompleted += 
+                        new EventHandler<ServiceReference.getPredictiveTextCompletedEventArgs>
+                                                                            (ClientListener);
+            // Calling a server method asynchronously to load and initialize the dictionary
+            client.loadDictionaryAsync();
+        }
+
+        /// <summary>
+        /// This method acts as an event listener for the server and fetches what is returned 
+        /// from the asynchronous calls to the server
+        /// </summary>
+        /// <param name="sender">The object invoking the event</param>
+        /// <param name="e">An argument for the completed events</param>
+        public void ClientListener(Object sender, 
+                            ServiceReference.getPredictiveTextCompletedEventArgs e)
+        {
+            ResultList = new List<String>();
+            foreach (String word in e.Result)
+            {
+                // temporarily holding whatever valid words are returned at any point
+                ResultList.Add(word);
+            }
+            
+            // Passing the first valid word to the Controller for display
+            List<String>.Enumerator en = ResultList.GetEnumerator();
+            while (en.MoveNext())
+            {
+                String content = en.Current;
+                MainPage.CheckDisplay(content);
+                break;
+            }
+        }
+
+        /// <summary>
+        /// This method calls the server to retrieve valid words for 
+        /// a given input sequence
+        /// </summary>
+        /// <param name="KeyPresses">Input sequence on mobile keypad</param>
+        public void LoadValidWords(String KeyPresses)
+        {
+            client.getPredictiveTextAsync(KeyPresses);
+        }
+
+        /// <summary>
+        /// This method performs word toggling w.r.t the server 
+        /// 
+        /// </summary>
+        /// <param name="ToggleCounter">Integer to count the number 
+        /// of toggles</param>
+        /// <param name="ToggleChecker">An integer to compare 
+        /// with the ToggleCounter so as to ensure the same 
+        /// word doesn't get repeated</param>
+        /// <returns></returns>
+        public String Toggle(int ToggleCounter, int ToggleChecker)
+        {
+            String toReturn = "";
+
+            foreach (String word in ResultList)
+            {
+                // This is to ensure that the first word does 
+                // not feature twice on pressing the toggle button
+                if (ToggleCounter == ToggleChecker)
+                {
+                    toReturn = word;
+                    break;
+                }
+                ToggleChecker++;
+            }
+            return toReturn;
+        }
+         
+        /// <summary>
+        /// This method performs word toggling w.r.t the server 
+        /// when the string contains spaces
+        /// </summary>
+        /// <param name="ToggleCounter">Integer to count the number 
+        /// of toggles</param>
+        /// <param name="ToggleChecker">An integer to compare 
+        /// with the ToggleCounter so as to ensure the same 
+        /// word doesn't get repeated</param>
+        /// <returns></returns>
+        public String ToggleWithSpaces(int ToggleCounter, int ToggleChecker, StringBuilder sb)
+        {
+            String toReturnWithSpaces = "";
+            //MessageBox.Show("ToggleCounter With spaces= " + ToggleCounter);
+            //MessageBox.Show("ToggleChecker with spaces = " + ToggleChecker);
+            foreach (String word in ResultList)
+            {
+                if (ToggleCounter == ToggleChecker)
+                {
+                    toReturnWithSpaces = sb.ToString() + word;
+                    break;
+                }
+                ToggleChecker++;
+            }
+            return toReturnWithSpaces;
+        }
+    }
+}

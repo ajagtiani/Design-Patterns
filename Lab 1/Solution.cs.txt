@@ -1,0 +1,530 @@
+﻿///Assignment 1: Implement a Generic Chained Hash Table
+///Author: Aditya Jagtiani
+///Email: axj4479@rit.edu
+
+using System;
+using System.Collections.Generic;
+
+namespace RIT_CS
+{
+    public class KeyValue<Key, Value>
+    {
+        /// <summary>
+        /// A class that creates a 'node' with a generic key and value
+        /// </summary>
+        /// <typeparam name="Key">The keys used in the hashtable</typeparam>
+        /// <typeparam name="Value">The values corresponding to the keys
+        /// </typeparam>
+
+        public Key key;
+        public Value value;
+
+        public KeyValue(Key k, Value v)
+        {
+            key = k;
+            value = v;
+        }
+    }
+
+    public class LinkedHashTable<Key, Value> : Table<Key, Value>
+    {
+        /// <summary>
+        /// A class that creates the Chained Hash Table, 
+        /// implementing the provided Table interface.
+        /// Makes use of of an Array of type list, that contains
+        /// a list of Key-Value pairs
+        /// </summary>
+        /// <typeparam name="Key">The keys used in the hashtable</typeparam>
+        /// <typeparam name="Value">The values corresponding to the keys
+        /// </typeparam>
+        public static double ElementCount = 0.0;
+        public static int ArrayPosition = 0;
+        List<KeyValue<Key, Value>>[] BucketArray; //Array of type List, 
+                                            //containing Key-Value pairs
+        public int ArrayCapacity;
+        public double threshold;
+
+        /// <summary>
+        /// A parameterized constructor
+        /// Initializes the chained hash table
+        /// </summary>
+        /// <param name="capacity">The initial capacity of the array</param>
+        /// <param name="loadThreshold">The load factor, exceeding which
+        /// rehashing takes place</param>
+        public LinkedHashTable(int capacity, double loadThreshold)
+        {
+            this.ArrayCapacity = capacity;
+            this.threshold = loadThreshold;
+            BucketArray = new List<KeyValue<Key, Value>>[ArrayCapacity];
+        }
+
+        /// <summary>
+        /// A method to return the location within the array at which the 
+        /// respective Key-Value pair should be added. 
+        /// </summary>
+        /// <param name="k">The key of the corresponding Key-Value pair</param>
+        /// <returns>The absolute value of the key number's hashcode, modulus the
+        /// capactiy of the array, i.e the location at which the key-value pair
+        /// should be inserted in the array</returns>
+        private int GetIndexNumber(Key k)
+        {
+            return Math.Abs(k.GetHashCode() % ArrayCapacity);
+        }
+
+        /// <summary>
+        /// Add a new entry in the hash table. If an entry with the
+        /// given key already exists, it is replaced without error.
+        /// put() always succeeds.
+        /// (Details left to implementing classes.)
+        /// </summary>
+        /// <param name="k">the key for the new or existing entry</param>
+        /// <param name="v">the (new) value for the key</param>
+        public void Put(Key k, Value v)
+        {
+            //Create a new node with the corresponding Key-Value pair
+            KeyValue<Key, Value> node = new KeyValue<Key, Value>(k, v);
+
+            List<KeyValue<Key, Value>> BucketList;
+
+            // Obtain position in the array from GetIndexNumber()
+            ArrayPosition = GetIndexNumber(k);
+
+            // Creates a list at the specified location, when there is no data
+            // at that location in the array, and adds the corresponding element. 
+            // Also checks whether addition of this element crosses the maximum 
+            // threshold of the array.
+            if (BucketArray[ArrayPosition] == null 
+                && !IsArrayFull(ElementCount + 1, threshold))
+            {
+                BucketList = new List<KeyValue<Key, Value>>();
+                BucketArray[ArrayPosition] = BucketList;
+                BucketArray[ArrayPosition].Add(node);
+                ElementCount++;
+            }
+
+            // When a key already exists in the structure, this replaces the 
+            // old pair with the new pair to be added, provided the new pair 
+            // has the same key
+            else if (BucketArray[ArrayPosition] != null && Contains(k)
+                && !IsArrayFull(ElementCount + 1, threshold))
+            {
+                List<KeyValue<Key, Value>> list = BucketArray[ArrayPosition];
+            }
+
+            //  When a specified position already contains an element, a new 
+            // element that hashes to the same location gets chained as a new 
+            // Key-Value pair to the existing element, thus forming a list
+            else if (BucketArray[ArrayPosition] != null && !Contains(k)
+                && !IsArrayFull(ElementCount + 1, threshold))
+            {
+                BucketArray[ArrayPosition].Add(node);
+                ElementCount++;
+            }
+
+            // Invokes Rehashing of the table when the load threshold is crossed
+            else if (IsArrayFull(ElementCount + 1, threshold))
+            {
+                RehashTable(k, v);
+            }
+        }
+
+        /// <summary>
+        /// Add a new entry in the hash table. If an entry with the
+        /// given key already exists, it is replaced without error.
+        /// put() always succeeds.
+        /// (Details left to implementing classes.)
+        /// </summary>
+        /// <param name="k">the key for the new or existing entry</param>
+        /// <param name="v">the (new) value for the key</param>
+        public bool Contains(Key key)
+        {
+            int Location = GetIndexNumber(key);
+
+            // Initialize a list with the Key-Value pair at the current location
+            // in the array
+            List<KeyValue<Key, Value>> list = BucketArray[Location];
+
+            // Return true if a node is encountered with a key equal to the 
+            // key being searched for, on traversing through every
+            // Key-Value pair in the list
+            foreach (KeyValue<Key, Value> node in list)
+            {
+                if (node.key.Equals(key))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Fetch the value associated with the given key.
+        /// </summary>
+        /// <param name="k">The key to be looked up in the table</param>
+        /// <returns>the value associated with the given key</returns>
+        /// <exception cref="NonExistentKey">if Contains(key) is false
+        /// </exception>
+        public Value Get(Key k)
+        {
+            // Initialize the ValueOfNode using default(Value), which is an alias for 
+            // 0 for null for reference types
+            Value ValueOfNode = default(Value);
+
+            // Initialize a list with the Key-Value pair at the current location
+            // in the array
+            int Location = GetIndexNumber(k);
+            try
+            {
+                List<KeyValue<Key, Value>> list = BucketArray[Location];
+
+                // Throw a 'non existent key' exception if the current location of 
+                // the array is null
+                if (list == null)
+                {
+                    throw new NonExistentKey<Key>(k);
+                }
+
+                // Traverses through every Key-Value pair in the list to 
+                // search for the value corresponding to the current key
+                foreach (KeyValue<Key, Value> node in list)
+                {
+                    if (node.key.Equals(k))
+                    {
+                        ValueOfNode = node.value;
+                    }
+                }
+            }
+
+            // Catch the 'non existent key' exception thrown above, when the 
+            // current array location is a null value
+            catch (NonExistentKey<Key> nek)
+            {
+                Console.WriteLine(nek.Message);
+                Console.WriteLine(nek.StackTrace);
+            }
+            return ValueOfNode;
+        }
+
+        /// <summary>
+        /// A method to check whether the array has exceeded the provided 
+        /// threshold
+        /// Calculated as the ratio if the number of individual key-value 
+        /// pairs in the array to the maximum capacity of the array
+        /// </summary>
+        /// <param name="nodeCount">The current number of individual key-value 
+        /// pairs present in the array<
+        /// /param>
+        /// <param name="threshold">The load factor provided</param>
+        /// <returns>True if the threshold has been crossed
+        /// False if has not been crossed<
+        /// /returns>
+        public bool IsArrayFull(double nodeCount, double threshold)
+        {
+            if ((nodeCount / (double)ArrayCapacity) > threshold)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// A method that performs 'rehashing' of the original table when 
+        /// the threshold is exceeded
+        /// </summary>
+        /// <param name="k">Key of the current element</param>
+        /// <param name="v">The element's corresponding value</param>
+        public void RehashTable(Key k, Value v)
+        {
+            // Creates a new Array of type List, with a 50% increase in 
+            // size
+            int NewArrayCapacity = (int)(ArrayCapacity * 1.5);
+            this.ArrayCapacity = NewArrayCapacity;
+            List<KeyValue<Key, Value>>[] NewBucketArray =
+                new List<KeyValue<Key, Value>>[ArrayCapacity];
+
+            for (int i = 0; i < BucketArray.Length; i++)
+            {
+                // Create a new list at the current position in the old array
+                List<KeyValue<Key, Value>> NewList 
+                    = new List<KeyValue<Key, Value>>();
+                NewList = BucketArray[i];
+                if (NewList == null)
+                {
+                    continue;
+                }
+
+                foreach (KeyValue<Key, Value> node in NewList)
+                {
+                    if (NewList == null)
+                    {
+                        Console.Write(" ");
+                    }
+
+                    // Copy the current pair's key and value into a new 
+                    // key-value pair and invoke a method to 'put' these into 
+                    // the new hash table
+                    else
+                    {
+                        Key NewKey = node.key;
+                        Value NewValue = node.value;
+                        RehashedPut(NewKey, NewValue, NewBucketArray);
+                    }
+                }
+            }
+            // Copying the reference of the old array to the new array 
+            // so that the elements originally added to the old array don't 
+            // get neglected
+            BucketArray = NewBucketArray;
+            this.Put(k, v);
+        }
+
+        /// <summary>
+        /// A method to build the new chained hash table after the previous  
+        /// exceeded the desired threshold
+        /// </summary>
+        /// <param name="NewKey">The key of the current element, copied from 
+        /// the old table</param>
+        /// <param name="NewValue">The element's corresponding value</param>
+        /// <param name="NewBucketArray">The new array with a 
+        /// 50% size increase</param>
+        public void RehashedPut(Key NewKey, Value NewValue, 
+                         List<KeyValue<Key, Value>>[] NewBucketArray)
+        {
+            int Location = GetIndexNumber(NewKey);
+
+            // Creating a new Key-Value pair with key & value of the current element
+            KeyValue<Key, Value> NewNode = new KeyValue<Key, Value>(NewKey, NewValue);
+
+            // Creates a list at the specified location, when there is no data 
+            // at that location in the array, and adds the corresponding element 
+            if (NewBucketArray[Location] == null)
+            {
+                List<KeyValue<Key, Value>> TempList = new List<KeyValue<Key, Value>>();
+                NewBucketArray[Location] = TempList;
+                NewBucketArray[Location].Add(NewNode);
+            }
+
+            // Chaining a key-value pair to an existing pair, in case of a collision
+            else
+            {
+                NewBucketArray[Location].Add(NewNode);
+            }
+        }
+
+        /// <summary>
+        /// A method to make a generic Enumerator that traverses through 
+        /// the chained hash table
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerator<Key> GetEnumerator()
+        {
+            List<KeyValue<Key, Value>> NewList;
+            for (int i = 0; i < BucketArray.Length; i++)
+            {
+                NewList = BucketArray[i];
+                if (NewList == null)
+                {
+                    Console.Write("");
+                }
+                else
+                {
+                    // Traverses through every Key-Value pair in the list and 
+                    // returns the key to be used by the Enumerator to iterate 
+                    // through the table
+                    foreach (KeyValue<Key, Value> NewNode in NewList)
+                    {
+                        yield return NewNode.key;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// This implements the IEnumerable.GetEnumerator interface by invoking the
+        /// enumerator implemented in GetEnumerator() for the chained hash table
+        /// </summary>
+        /// <returns></returns>
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+
+    /// <summary>
+    /// An exception used to indicate a problem with how
+    /// a HashTable instance is being accessed
+    /// </summary>
+    public class NonExistentKey<Key> : Exception
+    {
+        /// <summary>
+        /// The key that caused this exception to be raised
+        /// </summary>
+        public Key BadKey { get; private set; }
+
+        /// <summary>
+        /// Create a new instance and save the key that
+        /// caused the problem.
+        /// </summary>
+        /// <param name="k">
+        /// The key that was not found in the hash table
+        /// </param>
+        public NonExistentKey(Key k) :
+            base("Non existent key in HashTable: " + k)
+        {
+            BadKey = k;
+        }
+    }
+
+    /// <summary>
+    /// An associative (key-value) data structure.
+    /// A given key may not appear more than once in the table,
+    /// but multiple keys may have the same value associated with them.
+    /// Tables are assumed to be of limited size are expected to automatically
+    /// expand if too many entries are put in them.
+    /// </summary>
+    /// <param name="Key">the types of the table's keys (uses Equals())</param>
+    /// <param name="Value">the types of the table's values</param>
+    interface Table<Key, Value> : IEnumerable<Key>
+    {
+        /// <summary>
+        /// Add a new entry in the hash table. If an entry with the
+        /// given key already exists, it is replaced without error.
+        /// put() always succeeds.
+        /// (Details left to implementing classes.)
+        /// </summary>
+        /// <param name="k">the key for the new or existing entry</param>
+        /// <param name="v">the (new) value for the key</param>
+        void Put(Key k, Value v);
+
+        /// <summary>
+        /// Does an entry with the given key exist?
+        /// </summary>
+        /// <param name="k">the key being sought</param>
+        /// <returns>true iff the key exists in the table</returns>
+        bool Contains(Key k);
+
+        /// <summary>
+        /// Fetch the value associated with the given key.
+        /// </summary>
+        /// <param name="k">The key to be looked up in the table</param>
+        /// <returns>the value associated with the given key</returns>
+        /// <exception cref="NonExistentKey">if Contains(key) is false</exception>
+        Value Get(Key k);
+    }
+
+    class TableFactory
+    {
+        /// <summary>
+        /// Create a Table with the specified data types
+        /// </summary>
+        /// <param name="K">the key type</param>
+        /// <param name="V">the value type</param>
+        /// <param name="capacity">The initial maximum size of the table</param>
+        /// <param name="loadThreshold">
+        /// The fraction of the table's capacity that when
+        /// reached will cause a rebuild of the table to a 50% larger size
+        /// </param>
+        /// <returns>A new instance of Table</returns>
+        public static Table<K, V> Make<K, V>(int capacity = 100, 
+                                            double loadThreshold = 0.75)
+        {
+            return (new LinkedHashTable<K, V>(capacity, loadThreshold));
+        }
+    }
+
+    /// <summary>
+    /// A class that contains the Main () method
+    /// </summary>
+    public class MainClass
+    {
+        public static void Main(string[] args)
+        {
+            Table<String, String> ht = TableFactory.Make<String, String>(4, 0.5);
+            ht.Put("Joe", "Doe");
+            ht.Put("Jane", "Brain");
+            ht.Put("Chris", "Swiss");
+            try
+            {
+                foreach (String first in ht)
+                {
+                    Console.WriteLine(first + " -> " + ht.Get(first));
+                }
+                Console.WriteLine("=========================");
+
+                ht.Put("Wavy", "Gravy");
+                ht.Put("Chris", "Bliss");
+                foreach (String first in ht)
+                {
+                    Console.WriteLine(first + " -> " + ht.Get(first));
+                }
+
+                Console.WriteLine("=========================");
+
+                Console.Write("Jane -> ");
+                Console.WriteLine(ht.Get("Jane"));
+                Console.Write("John -> ");
+                Console.WriteLine(ht.Get("John"));
+            }
+            catch (NonExistentKey<String> nek)
+            {
+                Console.WriteLine(nek.Message);
+                Console.WriteLine(nek.StackTrace);
+            }
+            TestTable.Test(); //Call the Test method
+            Console.ReadLine();  
+        }
+    }
+
+    /// <summary>
+    /// A class that Tests some of the methods used to build the associative 
+    /// hash table
+    /// </summary>
+    public class TestTable
+    {
+        /// <summary>
+        /// Method containing tests for some of the methods used to build the 
+        /// hashtable
+        /// </summary>
+        public static void Test()
+        {
+            bool KeyTester = true;
+            // Test if the table has been created
+            Table<String, String> ht = TableFactory.Make<String, String>(4, 0.5);
+
+            if (ht == null)
+            {
+                Console.WriteLine("Table Creation Failed");
+            }
+            else
+            {
+                Console.WriteLine("Table Creation Successful");
+            }
+
+            // Testing Put method to see if element
+            // is getting added
+            ht.Put("Joe", "Doe");
+            KeyTester = ht.Contains("Joe");
+            if ((KeyTester == true) && (ht.Get("Joe") == "Doe"))
+            {
+                Console.WriteLine("Put() succeeds, correct Key-Value pair inserted");
+            }
+            else
+            {
+                Console.WriteLine("Put() fails, incorrect Key-Value pair inserted");
+            }
+
+            //Testing the get method to see if correct value has been retrieved
+            ht.Put("Hi", "Bye");
+            KeyTester = ht.Contains("Hi");
+            if (KeyTester && (ht.Get("Hi") == "Bye"))
+            {
+                Console.WriteLine("Get() Succeeds, correct value returned");
+            }
+            else
+            {
+                Console.WriteLine("Get() Fails, incorrect value returned");
+            }
+
+        }
+    }
+}

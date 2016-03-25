@@ -1,0 +1,875 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Collections;
+using System.Windows.Forms;
+using System.IO;
+
+namespace Assignment2
+	{
+	/// <summary>
+	/// This class performs the non-predictive & predictive 
+	/// functionality of the T9 keyboard 
+	/// </summary>
+	public partial class MainWindow : Window
+		{
+		// Object for creating the dicionary
+		T9Dictionary T9;
+
+		// List of words with the same keys
+		List<string> WordValues;
+
+		//A buffer to pass the pressed key sequence
+		StringBuilder PressedKeyNumber;
+
+		Timer ClickTimer = new Timer();
+		static int NumOfClicks = 0;
+		bool isSingleClick;
+		bool isDoubleClick;
+		string TypedText;
+		static int ToggleCounter;
+
+		public MainWindow()
+			{
+			InitializeComponent();
+			isSingleClick = true;
+			isDoubleClick = false;
+			ClickTimer.Interval = 1000;
+			ClickTimer.Tick += new EventHandler(DetermineTimerEvent);
+			}
+
+		/// <summary>
+		/// This method calls the controller to make a 
+		/// dictionary on reading the file
+		/// </summary>
+		public void InitializeWordDictionary()
+			{
+			PressedKeyNumber = new StringBuilder();
+			T9 = new T9Dictionary();
+			T9.CreateDictionary();
+			}
+
+		/// <summary>
+		/// The method checks whether the keyboard is in 
+		/// predictive/non-predicive mode
+		/// </summary>
+		/// <returns>True if predictive check box checked
+		/// False if predictive check box not checked</returns>
+		private bool isPredictiveMode()
+			{
+			if (predictiveCheckbox.IsChecked == true)
+				{
+				return true;
+				}
+			return false;
+			}
+
+		/// <summary>
+		/// This method stops the timer and displays the characters pressed in the time
+		///	interval. It is invoked when the initial time interval expires
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event 
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void DetermineTimerEvent(object sender, EventArgs e)
+			{
+			isSingleClick = true;
+			isDoubleClick = false;
+			ClickTimer.Stop();
+			TextViewer.AppendText(TypedText);
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '1' is pressed
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button1_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				TextViewer.AppendText("1");
+				}
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '2' is pressed.
+		/// For non predictive mode, it coordinates with the timer to check the 
+		/// number of key presses and displays the equivalent character. It handles 
+		/// single click functionalities.
+		/// 
+		/// For predictive mode, it appends '2' to a StringBuilder and passes it 
+		/// on to display to display a list of possible valid words with this 
+		/// keystroke.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button2_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isSingleClick)
+					{
+					ClickTimer.Start();
+					isSingleClick = false;
+					TypedText = "a";
+
+					//Comparing user click time and specified double click interval
+					if (SystemInformation.DoubleClickTime <= ClickTimer.Interval)
+						{
+						isDoubleClick = true;
+						NumOfClicks = 0;
+						}
+					}
+
+				else if (NumOfClicks == 3)
+					{
+					TypedText = "c";
+					}
+
+				else if (NumOfClicks == 4)
+					{
+					TypedText = "2";
+					}
+				} // end of non predictive mode
+
+			else //predictive
+				{
+				PressedKeyNumber.Append('2');
+				DisplayPredictiveWordList(PressedKeyNumber);
+				}
+			}
+
+		/// <summary>
+		/// This method handles the functionality of the button '2' when clicked twice
+		/// rapidly by checking the time that has passed in between clicks. It also 
+		/// displayes the corresponding character.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button2_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isDoubleClick)
+					{
+					TypedText = "b";
+					}
+				}
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '3' is pressed.
+		/// For non predictive mode, it coordinates with the timer to check the 
+		/// number of key presses and displays the equivalent character. It handles 
+		/// single click functionalities.
+		/// 
+		/// For predictive mode, it appends '3' to a StringBuilder and passes it 
+		/// on to display to display a list of possible valid words with this 
+		/// keystroke.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button3_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isSingleClick)
+					{
+					ClickTimer.Start();
+					TypedText = "d";
+					isSingleClick = false;
+					if (ClickTimer.Interval >= SystemInformation.DoubleClickTime)
+						{
+						NumOfClicks = 0;
+						isDoubleClick = true;
+						}
+					}
+				else if (NumOfClicks == 3)
+					{
+					TypedText = "f";
+					}
+				else if (NumOfClicks == 4)
+					{
+					TypedText = "3";
+					}
+				}
+			else //predictive
+				{
+				PressedKeyNumber.Append('3');
+				DisplayPredictiveWordList(PressedKeyNumber);
+				}
+			}
+
+		/// <summary>
+		/// This method handles the functionality of the button '3' when clicked twice
+		/// rapidly by checking the time that has passed in between clicks. It also 
+		/// displayes the corresponding character.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button3_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isDoubleClick)
+					{
+					TypedText = "e";
+					}
+				}
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '4' is pressed.
+		/// For non predictive mode, it coordinates with the timer to check the 
+		/// number of key presses and displays the equivalent character. It handles 
+		/// single click functionalities.
+		/// 
+		/// For predictive mode, it appends '2' to a StringBuilder and passes it 
+		/// on to display to display a list of possible valid words with this 
+		/// keystroke.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button4_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isSingleClick)
+					{
+					ClickTimer.Start();
+					TypedText = "g";
+					isSingleClick = false;
+					}
+				if (ClickTimer.Interval >= SystemInformation.DoubleClickTime)
+					{
+					NumOfClicks = 0;
+					isDoubleClick = true;
+					}
+
+				else if (NumOfClicks == 3)
+					{
+					TypedText = "i";
+					}
+				else if (NumOfClicks == 4)
+					{
+					TypedText = "4";
+					}
+				}
+			else
+				{
+				PressedKeyNumber.Append('4');
+				DisplayPredictiveWordList(PressedKeyNumber);
+				}
+			}
+
+		/// <summary>
+		/// This method handles the functionality of the button '4' when clicked twice
+		/// rapidly by checking the time that has passed in between clicks. It also 
+		/// displayes the corresponding character.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button4_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isDoubleClick)
+					{
+					TypedText = "h";
+					}
+				}
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '5' is pressed.
+		/// For non predictive mode, it coordinates with the timer to check the 
+		/// number of key presses and displays the equivalent character. It handles 
+		/// single click functionalities.
+		/// 
+		/// For predictive mode, it appends '2' to a StringBuilder and passes it 
+		/// on to display to display a list of possible valid words with this 
+		/// keystroke.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button5_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isSingleClick)
+					{
+					ClickTimer.Start();
+					TypedText = "j";
+					isSingleClick = false;
+					if (SystemInformation.DoubleClickTime <= ClickTimer.Interval)
+						{
+						isDoubleClick = true;
+						NumOfClicks = 0;
+						}
+					}
+
+				else if (NumOfClicks == 3)
+					{
+					TypedText = "l";
+					}
+				else if (NumOfClicks == 4)
+					{
+					TypedText = "5";
+					}
+				}
+			else
+				{
+				PressedKeyNumber.Append('5');
+				DisplayPredictiveWordList(PressedKeyNumber);
+				}
+
+			}
+
+		/// <summary>
+		/// This method handles the functionality of the button '5' when clicked twice
+		/// rapidly by checking the time that has passed in between clicks. It also 
+		/// displayes the corresponding character.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button5_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isDoubleClick)
+					{
+					TypedText = "k";
+					}
+				}
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '6' is pressed.
+		/// For non predictive mode, it coordinates with the timer to check the 
+		/// number of key presses and displays the equivalent character. It handles 
+		/// single click functionalities.
+		/// 
+		/// For predictive mode, it appends '6' to a StringBuilder and passes it 
+		/// on to display to display a list of possible valid words with this 
+		/// keystroke.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button6_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isSingleClick)
+					{
+					ClickTimer.Start();
+					TypedText = "m";
+					isSingleClick = false;
+					if (SystemInformation.DoubleClickTime <= ClickTimer.Interval)
+						{
+						isDoubleClick = true;
+						NumOfClicks = 0;
+						}
+					}
+
+				else if (NumOfClicks == 3)
+					{
+					TypedText = "o";
+					}
+				else if (NumOfClicks == 4)
+					{
+					TypedText = "6";
+					}
+				}
+			else
+				{
+				PressedKeyNumber.Append('6');
+				DisplayPredictiveWordList(PressedKeyNumber);
+				}
+			}
+
+		/// <summary>
+		/// This method handles the functionality of the button '6' when clicked twice
+		/// rapidly by checking the time that has passed in between clicks. It also 
+		/// displayes the corresponding character.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button6_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isDoubleClick)
+					{
+					TypedText = "n";
+					}
+				}
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '7' is pressed.
+		/// For non predictive mode, it coordinates with the timer to check the 
+		/// number of key presses and displays the equivalent character. It handles 
+		/// single click functionalities.
+		/// 
+		/// For predictive mode, it appends '7' to a StringBuilder and passes it 
+		/// on to display to display a list of possible valid words with this 
+		/// keystroke.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button7_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isSingleClick)
+					{
+					ClickTimer.Start();
+					TypedText = "p";
+					isSingleClick = false;
+					if (SystemInformation.DoubleClickTime <= ClickTimer.Interval)
+						{
+						isDoubleClick = true;
+						NumOfClicks = 0;
+						}
+					}
+				else if (NumOfClicks == 3)
+					{
+					TypedText = "r";
+					}
+				else if (NumOfClicks == 4)
+					{
+					TypedText = "s";
+					}
+				else if (NumOfClicks == 5)
+					{
+					TypedText = "7";
+					}
+				}
+			else
+				{
+				PressedKeyNumber.Append('7');
+				DisplayPredictiveWordList(PressedKeyNumber);
+				}
+			}
+
+		/// <summary>
+		/// This method handles the functionality of the button '7' when clicked twice
+		/// rapidly by checking the time that has passed in between clicks. It also 
+		/// displayes the corresponding character.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button7_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isDoubleClick && SystemInformation.DoubleClickTime < ClickTimer.Interval)
+					{
+					TypedText = "q";
+					}
+				}
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '8' is pressed.
+		/// For non predictive mode, it coordinates with the timer to check the 
+		/// number of key presses and displays the equivalent character. It handles 
+		/// single click functionalities.
+		/// 
+		/// For predictive mode, it appends '8' to a StringBuilder and passes it 
+		/// on to display to display a list of possible valid words with this 
+		/// keystroke.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button8_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isSingleClick)
+					{
+					ClickTimer.Start();
+					TypedText = "t";
+					isSingleClick = false;
+					if (SystemInformation.DoubleClickTime <= ClickTimer.Interval)
+						{
+						isDoubleClick = true;
+						NumOfClicks = 0;
+						}
+					}
+				else if (NumOfClicks == 3)
+					{
+					TypedText = "v";
+					}
+				else if (NumOfClicks == 4)
+					{
+					TypedText = "8";
+					}
+				}
+			else
+				{
+				PressedKeyNumber.Append('8');
+				DisplayPredictiveWordList(PressedKeyNumber);
+				}
+			}
+
+		/// <summary>
+		/// This method handles the functionality of the button '8' when clicked twice
+		/// rapidly by checking the time that has passed in between clicks. It also 
+		/// displayes the corresponding character.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button8_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isDoubleClick)
+					{
+					TypedText = "u";
+					}
+				}
+			}
+
+		/// <summary>
+		/// This functions handles keyboard responses when '9' is pressed.
+		/// For non predictive mode, it coordinates with the timer to check the 
+		/// number of key presses and displays the equivalent character. It handles 
+		/// single click functionalities.
+		/// 
+		/// For predictive mode, it appends '9' to a StringBuilder and passes it 
+		/// on to display to display a list of possible valid words with this 
+		/// keystroke.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button9_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isSingleClick)
+					{
+					ClickTimer.Start();
+					TypedText = "w";
+					isSingleClick = false;
+					if (SystemInformation.DoubleClickTime <= ClickTimer.Interval)
+						{
+						isDoubleClick = true;
+						NumOfClicks = 0;
+						}
+					}
+				else if (NumOfClicks == 3)
+					{
+					TypedText = "y";
+					}
+				else if (NumOfClicks == 4)
+					{
+					TypedText = "z";
+					}
+				else if (NumOfClicks == 5)
+					{
+					TypedText = "9";
+					}
+				}
+			else
+				{
+				PressedKeyNumber.Append('9');
+				DisplayPredictiveWordList(PressedKeyNumber);
+				}
+			}
+
+		/// <summary>
+		/// This method handles the functionality of the button '9' when clicked twice
+		/// rapidly by checking the time that has passed in between clicks. It also 
+		/// displayes the corresponding character.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// <param name="e">Information about the event</param>
+		private void button9_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				NumOfClicks++;
+				if (isDoubleClick)
+					{
+					TypedText = "x";
+					}
+				}
+			}
+
+		/// <summary>
+		/// This button handles the 'backspace' button on the keypad
+		/// In the non-predictive mode, it simply takes off the last character typed
+		/// 
+		/// In predictive mode, there are 2 cases handled:
+		/// If the last character is a space, it takes off the space
+		/// If the last character is a the end of a word, it takes off 
+		/// the entire word.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the
+		/// event handler</param>
+		/// <param name="e">Information about the event</param>
+		private void starButton_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode() && TextViewer.Text.Length != 0)
+				{
+				// Taking off the last character in non-predictive mode
+				TextViewer.Text = TextViewer.Text.Substring(0, TextViewer.Text.Length - 1);
+				}
+
+			else if (isPredictiveMode())
+				{
+				String CurrentText = TextViewer.Text;
+				StringBuilder DeleteBuilder;
+				String[] Word;
+
+				// if there is a space present
+				if (CurrentText.Contains(" "))
+					{
+					char[] BitChecker = CurrentText.ToCharArray();
+
+					// Deletion if there is a space at the last position
+					if (BitChecker[CurrentText.Length - 1] == ' ')
+						{
+						Word = CurrentText.Split(' ');
+						for (int i = 0; i < Word.Length - 1; i++)
+							{//Delete the word preceding the space also
+							TextViewer.Text = CurrentText.Substring(0, CurrentText.Length
+														- 1 - Word[i].Length);
+							}
+						}
+					// Deletion if the there is a char at the last position
+					if (BitChecker[CurrentText.Length - 1] != ' ')
+						{
+						DeleteBuilder = new StringBuilder();
+						CurrentText = TextViewer.Text;
+						Word = CurrentText.Split(' ');
+
+						for (int i = 0; i < Word.Length - 1; i++)
+							{
+							DeleteBuilder.Append(Word[i] + " ");
+							}
+						TextViewer.Text = DeleteBuilder.ToString();
+						}
+					}
+				else
+					{
+					TextViewer.Text = "";
+					}
+
+				// Refreshing the word list and StringBuilder holding the sequence of keys 
+				// pressed
+				WordValues = null;
+				PressedKeyNumber = new StringBuilder();
+				}
+			}
+
+		/// <summary>
+		/// This function handles toggling of a word in predictive mode. 
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the
+		/// event handler</param>
+		/// <param name="e">Information about the event</param>
+		private void ToggleButton_Click(object sender, RoutedEventArgs e)
+			{
+
+			if (isPredictiveMode())
+				{
+				// Maintain a counter for the number of toggles. 
+				// This counter is 1 when the first words appears in the 
+				//textbox
+				ToggleCounter++;
+
+				String getDisplayText = TextViewer.Text;
+
+				// if the string in the textbox doesn't contain a space
+				if (!getDisplayText.Contains(" "))
+					{
+					int ToggleChecker = 1;
+
+					foreach (String word in WordValues)
+						{
+						// This is to ensure that the first word does 
+						// not feature twice on pressing the toggle button
+						if (ToggleCounter == ToggleChecker)
+							{
+							TextViewer.Text = word;
+							break;
+							}
+						ToggleChecker++;
+						}
+					}
+
+				//Toggling if the string contains spaces
+				if (getDisplayText.Contains(" "))
+					{
+					String[] splitWords = getDisplayText.Split(' ');
+					StringBuilder sb = new StringBuilder("");
+
+					//Similar approach as the one without spaces, with 
+					//the exception that you split the string here and perform 
+					//toggling on the latest word in the string
+					for (int i = 0; i < splitWords.Length - 1; i++)
+						{
+						sb.Append(splitWords[i] + " ");
+						}
+
+					int ToggleChecker = 1;
+
+					foreach (String word in WordValues)
+						{
+						if (ToggleCounter == ToggleChecker)
+							{
+							TextViewer.Text = sb.ToString() + word;
+							break;
+							}
+						ToggleChecker++;
+						}
+					}
+				}
+			}
+
+		/// <summary>
+		/// This function handles keyboard responses when '#' is pressed.
+		/// For non-predictive mode, it simply appends a space to the existing 
+		/// string in the textbox
+		///
+		/// For predictive mode, it stores the existing string in the textbox 
+		/// in a new String and appends space to it, to prevent deletion of 
+		/// the original string.
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event
+		/// handler</param>
+		/// 
+		/// <param name="e">Information about the event</param>
+		private void spaceButton_Click(object sender, RoutedEventArgs e)
+			{
+			if (!isPredictiveMode())
+				{
+				TextViewer.AppendText(" ");
+				}
+			else
+				{
+				String OldText = TextViewer.Text;
+				String UpdatedText = OldText + " ";
+				TextViewer.Text = UpdatedText;
+
+				ToggleCounter = 0;
+
+				// Refreshing the data in the StringBuilder
+				PressedKeyNumber = new StringBuilder();
+
+				// Making the list of retrieved words null, as no keys have 
+				// been pressed yet to form a new word afer leaving a space.
+				WordValues = null;
+				}
+			}
+
+		/// <summary>
+		/// This method initializes the dictionary if the predictive checkbox
+		/// is ticked
+		/// </summary>
+		/// <param name="sender">The object invoking the event for the event handler</param>
+		/// <param name="e">Information about the event</param>
+		private void predictiveCheckbox_Checked(object sender, RoutedEventArgs e)
+			{
+			if (predictiveCheckbox.IsChecked == true)
+				{
+				InitializeWordDictionary();
+				}
+			}
+
+		/// <summary>
+		/// This function displays the predictive words on the screen. 
+		/// Performs predictive searching of dictionary and toggling of values
+		/// </summary>
+		/// <param name="PressedKeyNumber">StringBuilder containing the sequence 
+		/// of number pressed on the keypad for every word</param>
+		public void DisplayPredictiveWordList(StringBuilder PressedKeyNumber)
+			{
+			WordValues = T9.GetWordList(PressedKeyNumber.ToString());
+			String MyText = TextViewer.Text;
+			StringBuilder SpaceBuilder = new StringBuilder();
+
+			// Appropriate handling of the 'space' character in 
+			// predictive mode
+			if (MyText.Contains(" "))
+				{
+				// splitting the string by space delimiters
+				String[] Temp = MyText.Split(' ');
+				
+				// reset the toggle counter to 1 
+				ToggleCounter = 1; 
+				for (int i = 0; i < Temp.Length - 1; i++)
+					{
+					SpaceBuilder.Append(Temp[i] + " ");
+					}
+
+				// if the word list contains valid words for the input 
+				// sequence
+				if (WordValues != null)
+					{
+					foreach (String word in WordValues)
+						{
+						TextViewer.Text = SpaceBuilder.ToString() + word;
+						break;
+						}
+					}
+				}
+			
+			// If there are no spaces in the display string
+			else if (!TextViewer.Text.Contains(' '))
+				{
+				foreach (string words in WordValues)
+					{
+					TextViewer.Text = words;
+					ToggleCounter = 1;
+					break;
+					}
+				}
+			}
+		}
+	}

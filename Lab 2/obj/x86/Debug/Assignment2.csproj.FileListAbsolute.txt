@@ -1,0 +1,13 @@
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\bin\Debug\Assignment2.exe
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\bin\Debug\Assignment2.pdb
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\MainWindow.baml
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\MainWindow.g.cs
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\App.g.cs
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\Assignment2_MarkupCompile.cache
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\Assignment2.g.resources
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\Assignment2.Properties.Resources.resources
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\GenerateResource.read.1.tlog
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\GenerateResource.write.1.tlog
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\Assignment2.exe
+C:\Users\Aditya\Documents\Visual Studio 2010\Projects\Assignment2\Assignment2\obj\x86\Debug\Assignment2.pdb
